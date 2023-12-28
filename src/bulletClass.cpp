@@ -1,4 +1,15 @@
 #include "bulletClass.hpp"
+
+#define INCLUDE_DEBUG_DRAW 1
+#if INCLUDE_DEBUG_DRAW
+#include "physicsDebugDraw.hpp"
+#endif
+#include "Ragdoll.hpp"
+// Infra.
+#include <libdragon.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/gl_integration.h>
 #include <math.h>
 
 PhysicsObjectClass::PhysicsObjectClass()
@@ -9,6 +20,9 @@ PhysicsObjectClass::PhysicsObjectClass()
 // This is the destructor for the PhysicsObjectClass to clean up the memory
 PhysicsObjectClass::~PhysicsObjectClass()
 {
+#if INCLUDE_DEBUG_DRAW
+	delete physicsDebugDrawObject;	
+#endif
     delete dynamicsWorld;
     delete solver;
     delete dispatcher;
@@ -32,6 +46,11 @@ void PhysicsObjectClass::initializePhysics()
     solver = new btSequentialImpulseConstraintSolver;
     dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
     setGravity(btVector3(0, -30, 0)); // Set gravity to -30 on the Y axis to start
+	
+#if INCLUDE_DEBUG_DRAW
+	physicsDebugDrawObject = new PhysicsDebugDraw();
+	dynamicsWorld->setDebugDrawer(physicsDebugDrawObject);
+#endif
 }
 
 void PhysicsObjectClass::stepSimulation(float deltaTime)
@@ -113,6 +132,20 @@ void PhysicsObjectClass::createPrismRigidBody(int rigidBodySize, int startingHei
     prismRigidBodies.push_back(prismRigidBody);
 }
 
+void PhysicsObjectClass::DebugDrawWorld()
+{
+    glPushMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glEnable(GL_DEPTH_TEST);
+
+    glBegin(GL_LINES);
+
+    dynamicsWorld->debugDrawWorld();
+
+    glEnd();
+    glPopMatrix();	
+}
+
 void PhysicsObjectClass::resetPrismRigidBodies()
 {
     // Reset the prism rigid body to the starting position
@@ -172,4 +205,156 @@ void PhysicsObjectClass::updatePlaneRotation(float rotationX, float rotationZ)
 
     groundRigidBody->getMotionState()->setWorldTransform(trans);
     groundRigidBody->setWorldTransform(trans); // Update the world transform as well
+}
+
+void PhysicsObjectClass::createRagdoll()
+{
+    RagDoll* ragdollInstance = new RagDoll();
+    ragdollInstance->Initialize(btVector3(0.0f, 10.0f, 0.0f), 10.0f);
+    AddAssembly(ragdollInstance);
+    // Add all colliders/rigid bodies/constraints to the world.
+
+    // Define ground shape and body
+    //btCollisionShape *groundShape = new btStaticPlaneShape(btVector3(0, 1, 0), 0);                                                 // Create the ground shape
+    //btDefaultMotionState *groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0))); // Set the starting position of the ground
+    
+    //btRigidBody::btRigidBodyConstructionInfo groundRigidBodyCI(0, groundMotionState, groundShape, btVector3(0, 0, 0));             // Zero mass for static objects
+    //groundRigidBody = new btRigidBody(groundRigidBodyCI);                                                                          // Create the ground rigid body
+    //groundRigidBody->setRestitution(1.0f);                                                                                         // Make the ground bouncy
+    //dynamicsWorld->addRigidBody(groundRigidBody);                                                                                  // Add the ground to the world
+}
+
+void PhysicsObjectClass::AddRigidBody(btRigidBody* rigidBody)
+{
+    assert(rigidBody != nullptr);
+    if (rigidBody != nullptr)
+    {
+        dynamicsWorld->addRigidBody(rigidBody);
+    }
+}
+
+void PhysicsObjectClass::RemoveRigidBody(btRigidBody* rigidBody)
+{
+    assert(rigidBody != nullptr);
+    if (rigidBody != nullptr)
+    {
+        dynamicsWorld->removeRigidBody(rigidBody);
+    }
+}
+
+void PhysicsObjectClass::AddCollider(btCollisionObject* collider)
+{
+    assert(collider != nullptr);
+    if (collider != nullptr)
+    {
+        dynamicsWorld->addCollisionObject(collider, btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter | btBroadphaseProxy::CharacterFilter);
+    }
+}
+
+void PhysicsObjectClass::RemoveCollider(btCollisionObject* collider)
+{
+    assert(collider != nullptr);
+    if (collider != nullptr)
+    {
+        dynamicsWorld->removeCollisionObject(collider);
+    }
+}
+
+void PhysicsObjectClass::AddConstraint(btTypedConstraint* constraint)
+{
+    assert(constraint != nullptr);
+    if (constraint != nullptr)
+    {
+        bool disableConstraintsBetweenLinkedBodies = true;
+        dynamicsWorld->addConstraint(constraint, disableConstraintsBetweenLinkedBodies);
+    }
+}
+
+void PhysicsObjectClass::RemoveConstraint(btTypedConstraint* constraint)
+{
+    assert(constraint != nullptr);
+    if (constraint != nullptr)
+    {
+        dynamicsWorld->removeConstraint(constraint);
+    }
+}
+
+void PhysicsObjectClass::AddAssembly(PhysicalAssembly* assembly)
+{
+    assert(assembly != nullptr);
+    if (assembly != nullptr)
+    {
+        // Add all of the assembly's collision objects to the world.
+        const std::vector<btCollisionObject*>& assemblyColliders = assembly->GetColliders();
+        for (size_t colliderIndex = 0; colliderIndex < assemblyColliders.size(); colliderIndex++)
+        {
+            AddCollider(assemblyColliders[colliderIndex]);
+        }
+
+        // Add all of the assembly's rigid bodies to the world.
+        const std::vector<btRigidBody*>& assemblyRigidBodies = assembly->GetRigidBodies();
+        for (size_t bodyIndex = 0; bodyIndex < assemblyRigidBodies.size(); bodyIndex++)
+        {
+            AddRigidBody(assemblyRigidBodies[bodyIndex]);
+        }
+
+        // Add all of the assembly's constraints to the world.
+        const std::vector<btTypedConstraint*>& assemblyConstraints = assembly->GetConstraints();
+        for (size_t constraintIndex = 0; constraintIndex < assemblyConstraints.size(); constraintIndex++)
+        {
+            AddConstraint(assemblyConstraints[constraintIndex]);
+        }
+
+        // Add all of the assembly's actions.
+        const std::vector<btActionInterface*>& assemblyActions = assembly->GetActions();
+        for (size_t actionIndex = 0; actionIndex < assemblyActions.size(); actionIndex++)
+        {
+            AddAction(assemblyActions[actionIndex]);
+        }
+    }
+}
+
+void PhysicsObjectClass::RemoveAssembly(PhysicalAssembly* assembly)
+{
+    assert(assembly != nullptr);
+    if (assembly != nullptr)
+    {
+        // Remove all of the assembly's collision objects from the world.
+        const std::vector<btCollisionObject*>& assemblyColliders = assembly->GetColliders();
+        for (size_t colliderIndex = 0; colliderIndex < assemblyColliders.size(); colliderIndex++)
+        {
+            RemoveCollider(assemblyColliders[colliderIndex]);
+        }
+
+        // Remove all of the assembly's rigid bodies to the world.
+        const std::vector<btRigidBody*>& assemblyRigidBodies = assembly->GetRigidBodies();
+        for (size_t bodyIndex = 0; bodyIndex < assemblyRigidBodies.size(); bodyIndex++)
+        {
+            RemoveRigidBody(assemblyRigidBodies[bodyIndex]);
+        }
+
+        // Remove all of the assembly's constraints to the world.
+        const std::vector<btTypedConstraint*>& assemblyConstraints = assembly->GetConstraints();
+        for (size_t constraintIndex = 0; constraintIndex < assemblyConstraints.size(); constraintIndex++)
+        {
+            RemoveConstraint(assemblyConstraints[constraintIndex]);
+        }
+
+        // Remove all of the assembly's actions to the world.
+        const std::vector<btActionInterface*>& assemblyActions = assembly->GetActions();
+        for (size_t actionIndex = 0; actionIndex < assemblyActions.size(); actionIndex++)
+        {
+            RemoveAction(assemblyActions[actionIndex]);
+        }
+    }
+}
+
+void PhysicsObjectClass::AddAction(btActionInterface* action)
+{
+    dynamicsWorld->addAction(action);
+}
+
+void PhysicsObjectClass::RemoveAction(btActionInterface* action)
+{
+    dynamicsWorld->removeAction(action);
 }

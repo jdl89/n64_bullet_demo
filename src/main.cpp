@@ -55,6 +55,8 @@ void render()
     // Step the simulation - varies based on FPS
     enstantiatedPhysicsObject.stepSimulation();
 
+    enstantiatedPhysicsObject.DebugDrawWorld();
+
     drawPlane();
 
     drawPrismFromDisplayList(&enstantiatedPhysicsObject);
@@ -97,7 +99,7 @@ void setup()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    camera.distance = -200;
+    camera.distance = -100;
     camera.rotationY = -22.5;
 
     // Set up the prism display list - this is a static object so we only need to do this once even if we draw it multiple times
@@ -110,6 +112,8 @@ void setup()
         enstantiatedPhysicsObject.createPrismRigidBody();
     }
     enstantiatedPhysicsObject.createGroundRigidBody();
+
+//    enstantiatedPhysicsObject.createRagdoll();
 }
 
 void drawPlane() // The plane will act as the ground

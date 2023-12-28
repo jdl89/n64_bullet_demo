@@ -1,6 +1,9 @@
 #pragma once
 #include <bullet/btBulletDynamicsCommon.h> // This is the main Bullet include file, contains most common include files.
 #include <vector>                          // We will use a vector to store the rigid bodies
+class PhysicsDebugDraw;
+#include "PhysicalAssembly.hpp"
+
 class PhysicsObjectClass
 {
 public:
@@ -20,6 +23,19 @@ public:
         return prismRigidBodies;
     };                                   // Get the vector of prism rigid bodies
     btDynamicsWorld *GetDynamicsWorld(); // Get the dynamics world - example if you want to get the world from inside the class
+	
+    void DebugDrawWorld();
+    void createRagdoll();
+    void AddRigidBody(btRigidBody* rigidBody);
+    void RemoveRigidBody(btRigidBody* rigidBody);
+    void AddCollider(btCollisionObject* collider);
+    void RemoveCollider(btCollisionObject* collider);
+    void AddConstraint(btTypedConstraint* constraint);
+    void RemoveConstraint(btTypedConstraint* constraint);
+    void AddAssembly(PhysicalAssembly* assembly);
+    void RemoveAssembly(PhysicalAssembly* assembly);
+    void AddAction(btActionInterface* action);
+    void RemoveAction(btActionInterface* action);
 
 private:
     btCollisionConfiguration *collisionConfiguration;
@@ -30,4 +46,6 @@ private:
     // btRigidBody *prismRigidBody; // Legacy - we will use a vector of rigid bodies instead so that we can draw multiple prisms
     btRigidBody *groundRigidBody;
     std::vector<btRigidBody *> prismRigidBodies; // Vector of prism rigid bodies - we will use this to draw multiple prisms
+	
+	PhysicsDebugDraw* physicsDebugDrawObject;
 };
