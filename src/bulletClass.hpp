@@ -4,6 +4,8 @@
 class PhysicsDebugDraw;
 #include "PhysicalAssembly.hpp"
 
+#define USE_PHYSICS_DEBUG_DRAW 1
+
 class PhysicsObjectClass
 {
 public:
@@ -24,7 +26,7 @@ public:
     };                                   // Get the vector of prism rigid bodies
     btDynamicsWorld *GetDynamicsWorld(); // Get the dynamics world - example if you want to get the world from inside the class
 	
-    void DebugDrawWorld();
+    void DebugDrawWorld(int shouldDraw);
     void createRagdoll();
     void AddRigidBody(btRigidBody* rigidBody);
     void RemoveRigidBody(btRigidBody* rigidBody);

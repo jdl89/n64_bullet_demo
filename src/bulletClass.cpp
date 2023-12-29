@@ -1,7 +1,6 @@
 #include "bulletClass.hpp"
 
-#define INCLUDE_DEBUG_DRAW 1
-#if INCLUDE_DEBUG_DRAW
+#if USE_PHYSICS_DEBUG_DRAW
 #include "physicsDebugDraw.hpp"
 #endif
 #include "Ragdoll.hpp"
@@ -20,7 +19,7 @@ PhysicsObjectClass::PhysicsObjectClass()
 // This is the destructor for the PhysicsObjectClass to clean up the memory
 PhysicsObjectClass::~PhysicsObjectClass()
 {
-#if INCLUDE_DEBUG_DRAW
+#if USE_PHYSICS_DEBUG_DRAW
 	delete physicsDebugDrawObject;	
 #endif
     delete dynamicsWorld;
@@ -47,7 +46,7 @@ void PhysicsObjectClass::initializePhysics()
     dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
     setGravity(btVector3(0, -30, 0)); // Set gravity to -30 on the Y axis to start
 	
-#if INCLUDE_DEBUG_DRAW
+#if USE_PHYSICS_DEBUG_DRAW
 	physicsDebugDrawObject = new PhysicsDebugDraw();
 	dynamicsWorld->setDebugDrawer(physicsDebugDrawObject);
 #endif
@@ -132,18 +131,21 @@ void PhysicsObjectClass::createPrismRigidBody(int rigidBodySize, int startingHei
     prismRigidBodies.push_back(prismRigidBody);
 }
 
-void PhysicsObjectClass::DebugDrawWorld()
+void PhysicsObjectClass::DebugDrawWorld(int shouldDraw)
 {
-    glPushMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glEnable(GL_DEPTH_TEST);
+    if (shouldDraw)
+    {
+        glPushMatrix();
+        glMatrixMode(GL_MODELVIEW);
+        glEnable(GL_DEPTH_TEST);
 
-    glBegin(GL_LINES);
+        glBegin(GL_LINES);
 
-    dynamicsWorld->debugDrawWorld();
+        dynamicsWorld->debugDrawWorld();
 
-    glEnd();
-    glPopMatrix();	
+        glEnd();
+        glPopMatrix();
+    }
 }
 
 void PhysicsObjectClass::resetPrismRigidBodies()

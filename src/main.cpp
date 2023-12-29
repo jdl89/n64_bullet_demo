@@ -6,6 +6,10 @@
 #include "bulletClass.hpp"
 #include "main.hpp"
 
+extern "C" {
+    #include "../lib/microuiN64.h"
+}
+
 #define TARGET_FRAME_TIME_MS 33.33                                         // milliseconds for 30 FPS
 #define TARGET_FRAME_TIME (TARGET_FRAME_TIME_MS * TICKS_PER_SECOND / 1000) // converting milliseconds to ticks - TICKS_PER_SECOND is defined in libdragon
 
@@ -13,6 +17,8 @@
 float sceneRotation = 0.0f;
 surface_t zbuffer;
 camera_t camera = {100, 0};
+
+static const int kPrismCount = 0;
 
 // Allocate the prism display list
 static GLuint prismDisplayList;
@@ -28,6 +34,30 @@ float plane_rotationZ = 0.0f;
 double frame_start;
 double frame_end;
 double frame_duration;
+
+static int debugDraw = 1;
+
+void DrawSimulationSettingsWindow()
+{
+    mu64_set_mouse_speed(0.000000001f * frame_duration);
+
+    if (mu_begin_window_ex(&mu_ctx, "Simulation Config", mu_rect(12, 20, 90, 140), MU_OPT_NOCLOSE))
+    {
+        mu_checkbox(&mu_ctx, "DebugDraw", &debugDraw);
+
+        if (mu_button(&mu_ctx, "Ragdoll"))
+        {
+            enstantiatedPhysicsObject.createRagdoll();
+        }
+
+        if (mu_button(&mu_ctx, "Prism"))
+        {
+            enstantiatedPhysicsObject.createPrismRigidBody();
+        }
+
+        mu_end_window(&mu_ctx);
+    }
+}
 
 void render()
 {
@@ -55,13 +85,17 @@ void render()
     // Step the simulation - varies based on FPS
     enstantiatedPhysicsObject.stepSimulation();
 
-    enstantiatedPhysicsObject.DebugDrawWorld();
+#if USE_PHYSICS_DEBUG_DRAW
+    enstantiatedPhysicsObject.DebugDrawWorld(debugDraw);
+#endif
 
     drawPlane();
 
     drawPrismFromDisplayList(&enstantiatedPhysicsObject);
 
     gl_context_end();
+
+    mu64_draw(); // Step 5/5: render out the UI at the very end
 
     rdpq_detach_wait(); // Wait for the RDP queue to finish otherwise the display won't properly handle the text
 
@@ -81,9 +115,9 @@ void render()
     }
 
     // Message on screen for controls
-    graphics_draw_text(disp, 5, 15, "Controls:");
-    graphics_draw_text(disp, 5, 25, "Analog Stick: Move Plane");
-    graphics_draw_text(disp, 5, 35, "A: Reset Prisms");
+    graphics_draw_text(disp, 15, 15, "Controls:");
+    graphics_draw_text(disp, 15, 25, "Analog Stick: Move Plane");
+    graphics_draw_text(disp, 15, 35, "A: Reset Prisms");
 
     // Don't forget to update the display
     display_show(disp);
@@ -107,13 +141,11 @@ void setup()
 
     // Create the physics object
     enstantiatedPhysicsObject.initializePhysics();
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < kPrismCount; i++)
     {
         enstantiatedPhysicsObject.createPrismRigidBody();
     }
     enstantiatedPhysicsObject.createGroundRigidBody();
-
-//    enstantiatedPhysicsObject.createRagdoll();
 }
 
 void drawPlane() // The plane will act as the ground
@@ -211,10 +243,21 @@ int main()
 
     joypad_init();
 
+    dfs_init(DFS_DEFAULT_LOCATION);
+
     // Setting up the display and GL
     display_init(RESOLUTION_320x240, DEPTH_16_BPP, 3, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS_DEDITHER);
     rdpq_init();
     gl_init();
+
+    // Step 1/5: Make sure you have a small font loaded
+    rdpq_font_t *font = rdpq_font_load("rom:/VCR_OSD_MONO.font64");
+    uint8_t font_id = 1;
+    rdpq_text_register_font(font_id, font);
+
+    // Step 2/5: init UI libary, pass in the controller (joystick or N64-mouse) and font-id
+    // (Note: take a look inside this function for styling and controls.)
+    mu64_init(JOYPAD_PORT_1, font_id);
 
     // Setting up the camera
     setup();
@@ -222,7 +265,13 @@ int main()
     // continuously loop through the render function
     while (1)
     {
+        joypad_poll();
+
+        mu64_start_frame();// Step 3/5: call this BEFORE your game logic starts each frame
+        DrawSimulationSettingsWindow();
         handleControls();
+        mu64_end_frame(); // Step 4/5: call this AFTER your game logic ends each frame
+
         render();
     }
 
@@ -235,19 +284,19 @@ int main()
 // Controls to move the plane around
 void handleControls()
 {
-    joypad_poll();
-
     int vertical_input = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_Y);
     int horizontal_input = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_X);
-    joypad_buttons_t button_pressed = joypad_get_buttons_pressed(JOYPAD_PORT_1);
 
     plane_rotationX += horizontal_input * 0.3;
     plane_rotationZ -= vertical_input * 0.3;
 
+/*
+    joypad_buttons_t button_pressed = joypad_get_buttons_pressed(JOYPAD_PORT_1);
     if (button_pressed.a)
     {
         enstantiatedPhysicsObject.resetPrismRigidBodies();
     }
+*/
 }
 
 void drawFPS(surface_t *localDisplay)
@@ -256,5 +305,5 @@ void drawFPS(surface_t *localDisplay)
     float fps = display_get_fps();
 
     // Print the FPS to the screen
-    graphics_draw_text(localDisplay, 5, 5, std::to_string(fps).c_str());
+    graphics_draw_text(localDisplay, 15, 5, std::to_string(fps).c_str());
 }
