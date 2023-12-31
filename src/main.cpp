@@ -4,6 +4,7 @@
 #include <GL/gl_integration.h>
 #include "camera.hpp"
 #include "bulletClass.hpp"
+#include "physicsDebugDraw.hpp"
 #include "main.hpp"
 
 extern "C" {
@@ -39,11 +40,17 @@ static int debugDraw = 1;
 
 void DrawSimulationSettingsWindow()
 {
-    mu64_set_mouse_speed(0.000000001f * frame_duration);
-
-    if (mu_begin_window_ex(&mu_ctx, "Simulation Config", mu_rect(12, 20, 90, 140), MU_OPT_NOCLOSE))
+    if (mu_begin_window_ex(&mu_ctx, "Simulation Config", mu_rect(12, 20, 90, 180), MU_OPT_NOCLOSE))
     {
-        mu_checkbox(&mu_ctx, "DebugDraw", &debugDraw);
+        if (mu_button(&mu_ctx, "Box"))
+        {
+            enstantiatedPhysicsObject.createBox();
+        }
+
+        if (mu_button(&mu_ctx, "Sphere"))
+        {
+            enstantiatedPhysicsObject.createSphere();
+        }
 
         if (mu_button(&mu_ctx, "Ragdoll"))
         {
@@ -54,6 +61,10 @@ void DrawSimulationSettingsWindow()
         {
             enstantiatedPhysicsObject.createPrismRigidBody();
         }
+
+        mu_checkbox(&mu_ctx, "DebugDraw", &debugDraw);
+        PhysicsDebugDraw* debugDraw = enstantiatedPhysicsObject.GetPhysicsDebugDraw();
+        debugDraw->DrawToolOverlay();
 
         mu_end_window(&mu_ctx);
     }
@@ -104,6 +115,9 @@ void render()
     frame_end = get_ticks();
     frame_duration = frame_end - frame_start;
     double frame_duration_ms = (double)frame_duration / (TICKS_PER_SECOND / 1000);
+
+    mu64_set_mouse_speed(0.000000001f * frame_duration);
+
     printf("Frame start (milliSec): %f\n", frame_start / (TICKS_PER_SECOND / 1000));
     printf("Frame end (milliSec): %f\n", frame_end / (TICKS_PER_SECOND / 1000));
     printf("Frame duration (milliSec): %f\n", frame_duration_ms);
@@ -127,13 +141,13 @@ void setup()
 {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45.0, (float)display_get_width() / (float)display_get_height(), 50.0f, 400.0f);
+    gluPerspective(45.0, (float)display_get_width() / (float)display_get_height(), 5.0f, 400.0f);
     zbuffer = surface_alloc(FMT_RGBA16, display_get_width(), display_get_height());
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    camera.distance = -100;
+    camera.distance = -50;
     camera.rotationY = -22.5;
 
     // Set up the prism display list - this is a static object so we only need to do this once even if we draw it multiple times
@@ -284,11 +298,14 @@ int main()
 // Controls to move the plane around
 void handleControls()
 {
-    int vertical_input = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_Y);
-    int horizontal_input = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_X);
+    if (!mu64_is_active())
+    {
+        int vertical_input = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_Y);
+        int horizontal_input = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_X);
 
-    plane_rotationX += horizontal_input * 0.3;
-    plane_rotationZ -= vertical_input * 0.3;
+        plane_rotationX += horizontal_input * 0.3;
+        plane_rotationZ -= vertical_input * 0.3;
+    }
 
 /*
     joypad_buttons_t button_pressed = joypad_get_buttons_pressed(JOYPAD_PORT_1);

@@ -7,6 +7,10 @@
 // Local.
 #include "physicsDebugDraw.hpp"
 
+extern "C" {
+    #include "../lib/microuiN64.h"
+}
+
 #define kContactPointScaler 0.1f
 
 //////////////////////////////////////////////////////////////////////////
@@ -22,6 +26,12 @@ void PhysicsDebugDraw::drawLine( const btVector3& from,const btVector3& to,const
 //////////////////////////////////////////////////////////////////////////
 void PhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color )
 {
+	float length = distance * 100.0f;
+	glColor3f(color[0], color[1], color[2]);
+	glVertex3f(PointOnB[0], PointOnB[1], PointOnB[2]);
+
+	glColor3f(color[0], color[1], color[2]);
+	glVertex3f(PointOnB[0] + normalOnB[0] * length, PointOnB[1] + normalOnB[1]* length, PointOnB[2] + normalOnB[2]* length);
 	// @TODO: Implement the contact point rendering
 	/*
 	ddVec3_In pointOnBPosition = { PointOnB.x(), PointOnB.y(), PointOnB.z() };
@@ -38,12 +48,49 @@ void PhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVecto
 	*/
 }
 
-/*
-// @TODO: Attempt to connect the physics engine settings to a MicroGui tool overlay.
+int CheckboxFlags(const char* label, unsigned int* flags, unsigned int flag_value)
+{
+	int result = 0;
+
+	mu_push_id(&mu_ctx, &flag_value, sizeof(flag_value));
+
+    unsigned int current_flags = *flags;
+
+	int checked = (current_flags & flag_value) == flag_value;
+	if (mu_checkbox(&mu_ctx, label, &checked))
+	{
+		result = 1;
+		if (checked)
+		{
+			current_flags |= flag_value;
+		}
+		else
+		{
+			current_flags &= ~flag_value;
+		}
+
+    	*flags = current_flags;
+	}
+
+	mu_pop_id(&mu_ctx);
+
+    return result;
+}
+
 void PhysicsDebugDraw::DrawToolOverlay()
 {
-	int debugDrawFlags = getDebugMode();
-	bool altered = false;
+	unsigned int debugDrawFlags = static_cast<unsigned int>(getDebugMode());
+
+	int altered = 0;
+	
+	altered |= CheckboxFlags("Wireframe", &debugDrawFlags, DBG_DrawWireframe);
+	altered |= CheckboxFlags("AABB", &debugDrawFlags, DBG_DrawAabb);
+	altered |= CheckboxFlags("DrawContactPoints", &debugDrawFlags, DBG_DrawContactPoints);
+	altered |= CheckboxFlags("Constraints", &debugDrawFlags, DBG_DrawConstraints);
+	altered |= CheckboxFlags("DrawNormals", &debugDrawFlags, DBG_DrawNormals);
+	altered |= CheckboxFlags("Frames", &debugDrawFlags, DBG_DrawFrames);
+	/*
+	
 	altered |= ImGui::CheckboxFlags("DBG_DrawFrames", &debugDrawFlags, DBG_DrawFrames);
 	altered |= ImGui::CheckboxFlags("DBG_DrawWireframe", &debugDrawFlags, DBG_DrawWireframe); ImGui::SameLine();
 	altered |= ImGui::CheckboxFlags("DBG_DrawAabb", &debugDrawFlags, DBG_DrawAabb); ImGui::SameLine();
@@ -66,13 +113,14 @@ void PhysicsDebugDraw::DrawToolOverlay()
 	// altered |= ImGui::CheckboxFlags("DBG_ProfileTimings", &debugDrawFlags, DBG_ProfileTimings); ImGui::SameLine();
 	// altered |= ImGui::CheckboxFlags("DBG_EnableSatComparison", &debugDrawFlags, DBG_EnableSatComparison); ImGui::SameLine();
 	// altered |= ImGui::CheckboxFlags("DBG_DisableBulletLCP", &debugDrawFlags, DBG_DisableBulletLCP); ImGui::SameLine();
+	*/
 
-	if (altered)
+	if (altered > 0)
 	{
 		setDebugMode(debugDrawFlags);
 	}
 }
-*/
+
 
 //////////////////////////////////////////////////////////////////////////
 void PhysicsDebugDraw::reportErrorWarning(const char* warningString)

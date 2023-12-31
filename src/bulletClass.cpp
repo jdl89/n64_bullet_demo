@@ -214,16 +214,42 @@ void PhysicsObjectClass::createRagdoll()
     RagDoll* ragdollInstance = new RagDoll();
     ragdollInstance->Initialize(btVector3(0.0f, 10.0f, 0.0f), 10.0f);
     AddAssembly(ragdollInstance);
-    // Add all colliders/rigid bodies/constraints to the world.
 
-    // Define ground shape and body
-    //btCollisionShape *groundShape = new btStaticPlaneShape(btVector3(0, 1, 0), 0);                                                 // Create the ground shape
-    //btDefaultMotionState *groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0))); // Set the starting position of the ground
-    
-    //btRigidBody::btRigidBodyConstructionInfo groundRigidBodyCI(0, groundMotionState, groundShape, btVector3(0, 0, 0));             // Zero mass for static objects
-    //groundRigidBody = new btRigidBody(groundRigidBodyCI);                                                                          // Create the ground rigid body
-    //groundRigidBody->setRestitution(1.0f);                                                                                         // Make the ground bouncy
-    //dynamicsWorld->addRigidBody(groundRigidBody);                                                                                  // Add the ground to the world
+    ragdolls.push_back(ragdollInstance);
+}
+
+void PhysicsObjectClass::createBox()
+{
+    static const float kBoxSize = 2.5f;
+    btBoxShape* boxShape = new btBoxShape(btVector3(kBoxSize, kBoxSize, kBoxSize));
+    btDefaultMotionState* boxMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 10.0f, 0)));
+
+    // Zero mass for kinematic objects - it will not move unless you move it
+    btScalar mass = 1.0;
+    btVector3 boxInertia(0, 0, 0);
+    boxShape->calculateLocalInertia(mass, boxInertia);
+
+    btRigidBody::btRigidBodyConstructionInfo boxCreateInfo(mass, boxMotionState, boxShape, boxInertia);
+    btRigidBody* boxRigidBody = new btRigidBody(boxCreateInfo); // Create the ground rigid body
+
+    dynamicsWorld->addRigidBody(boxRigidBody); // Add the ground to the physics world
+}
+
+void PhysicsObjectClass::createSphere()
+{
+    static const float kSphereRadius = 1.5f;
+    btSphereShape* sphereShape = new btSphereShape(kSphereRadius);
+    btDefaultMotionState* sphereMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 10.0f, 0)));
+
+    // Zero mass for kinematic objects - it will not move unless you move it
+    btScalar mass = 1.0;
+    btVector3 sphereInertia(0, 0, 0);
+    sphereShape->calculateLocalInertia(mass, sphereInertia);
+
+    btRigidBody::btRigidBodyConstructionInfo sphereCreateInfo(mass, sphereMotionState, sphereShape, sphereInertia);
+    btRigidBody* sphereRigidBody = new btRigidBody(sphereCreateInfo); // Create the ground rigid body
+
+    dynamicsWorld->addRigidBody(sphereRigidBody); // Add the ground to the physics world
 }
 
 void PhysicsObjectClass::AddRigidBody(btRigidBody* rigidBody)

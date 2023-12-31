@@ -28,6 +28,9 @@ public:
 	
     void DebugDrawWorld(int shouldDraw);
     void createRagdoll();
+    void createBox();
+    void createSphere();
+
     void AddRigidBody(btRigidBody* rigidBody);
     void RemoveRigidBody(btRigidBody* rigidBody);
     void AddCollider(btCollisionObject* collider);
@@ -39,6 +42,8 @@ public:
     void AddAction(btActionInterface* action);
     void RemoveAction(btActionInterface* action);
 
+    PhysicsDebugDraw* GetPhysicsDebugDraw() const { return physicsDebugDrawObject; }
+
 private:
     btCollisionConfiguration *collisionConfiguration;
     btDispatcher *dispatcher;
@@ -48,6 +53,8 @@ private:
     // btRigidBody *prismRigidBody; // Legacy - we will use a vector of rigid bodies instead so that we can draw multiple prisms
     btRigidBody *groundRigidBody;
     std::vector<btRigidBody *> prismRigidBodies; // Vector of prism rigid bodies - we will use this to draw multiple prisms
+
+    std::vector<PhysicalAssembly*> ragdolls; // Vector of ragdolls
 	
 	PhysicsDebugDraw* physicsDebugDrawObject;
 };

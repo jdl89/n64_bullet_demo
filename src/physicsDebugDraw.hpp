@@ -16,8 +16,9 @@ public:
 	virtual void setDebugMode(int debugMode ) { mDebugMode = debugMode; }
 	virtual int getDebugMode() const { return mDebugMode; }
 
-	// @TODO: Implement a settings UI
-	// void DrawToolOverlay();
+	void DrawToolOverlay();
+
+	int& GetDebugModeConfig() { return mDebugMode; }
 
 private:
 	int mDebugMode;
